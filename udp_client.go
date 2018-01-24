@@ -6,119 +6,83 @@ import (
 	"time"
 )
 
-
-
-func receiver2() {
-    ServerAddr,err := net.ResolveUDPAddr("udp4",":20003")
-    if err != nil {
-		fmt.Println(err)
-	}
-
-    /* Now listen at selected port */
-    ServerConn, err := net.ListenUDP("udp4", ServerAddr)
-    if err != nil {
-		fmt.Println(err)
-	}
-
-    defer ServerConn.Close()
- 
-    buf := make([]byte, 1024)
- 
-    for {
-        n,addr,err := ServerConn.ReadFromUDP(buf)
-        fmt.Println("Received ",string(buf[0:n]), " from ",addr)
- 
-        if err != nil {
-            fmt.Println("Error: ",err)
-        } 
+// General function to check different errors
+func CheckError(err error) {
+    if err  != nil {
+        fmt.Println("Error: " , err)
     }
 }
 
+func listenServerBroadcastUDP(){
 
+	///////////////////////////
+	// FINDING THE SERVER IP //
+	///////////////////////////
 
-func broadcast() {
-	time.Sleep(time.Second*1)
+	// Listen for incoming connections.
+	serverAddress, err := net.ResolveUDPAddr("udp", ":30000")
+	CheckError(err)
+	conn, err := net.ListenUDP("udp", serverAddress)
+	CheckError(err)
 
-	ServerAddr, err := net.ResolveUDPAddr("udp4","255.255.255.255:20003")
-	if err != nil {
-		fmt.Println(err)
-	}
+	fmt.Println("Before ReadFromUDP")
+	message := make([]byte, 1024)
+	conn.ReadFromUDP(message)					// Will not be read if server is down
+	fmt.Println(string(message))
+	fmt.Println("After ReadFromUDP")
 
-	conn, err := net.DialUDP("udp4", nil, ServerAddr)
-	if err != nil {
-		fmt.Println(err)
-	}
+	// Close the listener when the application closes.
+	defer conn.Close()
+}
 
+func tranceiveServerUDP(){
+	/////////////////////////
+	// SENDING UDP PACKETS //
+	/////////////////////////
 
-	conn.Write([]byte("dette er bredkast"))
-	if err != nil {
-		fmt.Println(err)
+	// Setup server (host)
+	ServerAddr,err := net.ResolveUDPAddr("udp",":20018") // 129.241.187.38, // 255.255.255.255
+	CheckError(err)
+
+	// Setup local computer (client)
+	//LocalAddr, err := net.ResolveUDPAddr("udp", "129.241.187.151:20018")
+	//CheckError(err)
+
+	Conn_wr, err := net.DialUDP("udp", nil, ServerAddr)
+	CheckError(err)
+
+	Conn_rd, err := net.ListenUDP("udp", ServerAddr)
+	CheckError(err)
+
+	// End the connection when the application closes
+	defer Conn_wr.Close()
+	defer Conn_rd.Close()
+
+	// Read message space
+	buf_rd := make([]byte, 1024)
+	
+	for {
+		// Write message
+		msg := "Hello World !"
+		buf_wr := []byte(msg)
+
+		// Send message to server
+		_,err := Conn_wr.Write(buf_wr)
+		CheckError(err)
+
+		// Read message from server
+		_,err = Conn_rd.ReadFromUDP(buf_rd)
+		fmt.Println(string(buf_rd))
+		CheckError(err)
+
+		// Print message
+		fmt.Println(buf_rd)
+		time.Sleep(time.Second * 1)
 	}
 }
 
 func main() {
 
-
-	go broadcast()
-	go receiver2()
-	time.Sleep(time.Second*5)
-
+	listenServerBroadcastUDP()
+	tranceiveServerUDP()
 }
-
-
-
-
-
-
-
-
-
-
-
-/*func receiver() {
-
-	conn, err := net.Listen("udp", ":20003")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	for i<10 {
-		conn.
-	}
-
-}
-
-
-func sender() int{
-
-	ServerAddr,err := net.ResolveUDPAddr("udp",":20003")
-    if err != nil {
-		fmt.Println(err)
-	}
-
-	//var IPAddr string = ""
-
-	//IPAddr = string(ServerAddr.IP[:])
-
-	fmt.Printf(string(ServerAddr.IP))	
-
-	conn, err := net.Dial("udp", ":20003")
-
-	if err != nil {
-		return 0
-	}
-
-	defer conn.Close()
-	var i int = 0
-
-	for i<10 {
-
-		i++
-		conn.Write([]byte("Hello from sender"))
-
-		time.Sleep(time.Second*1)
-	}
-
-	return 1
-}
-*/
